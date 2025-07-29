@@ -207,7 +207,15 @@ async function initONNX() {
     // }
     
     // 加载模型
-    session.value = await ort.InferenceSession.create('/modnet/model.onnx')
+    let modelPath = '/IDPhotoGenerator/modnet/model.onnx'
+    if (import.meta.env.DEV) {
+      modelPath = '/modnet/model.onnx'
+    }
+
+    if (import.meta.env.PROD) {
+      modelPath = '/IDPhotoGenerator/modnet/model.onnx'
+    }
+    session.value = await ort.InferenceSession.create(modelPath)
     console.log('ModNet模型加载成功')
   } catch (error) {
     console.error('模型加载失败:', error)
@@ -384,15 +392,15 @@ function generatePrintLayout() {
   const printCanvasEl = printCanvas.value
   const ctx = printCanvasEl.getContext('2d')
   
-  // A4纸张尺寸 (300 DPI): 2480 x 3508 像素
-  const a4Width = 2480
-  const a4Height = 3508
-  printCanvasEl.width = a4Width
-  printCanvasEl.height = a4Height
+  // 6寸相纸尺寸 (300 DPI): 1795 x 1205 像素 (152mm × 102mm)
+  const paperWidth = 1795
+  const paperHeight = 1205
+  printCanvasEl.width = paperWidth
+  printCanvasEl.height = paperHeight
   
   // 填充白色背景
   ctx.fillStyle = '#FFFFFF'
-  ctx.fillRect(0, 0, a4Width, a4Height)
+  ctx.fillRect(0, 0, paperWidth, paperHeight)
   
   // 获取单张证件照尺寸
   const photoWidth = selectedSize.value.pixelWidth
@@ -403,8 +411,8 @@ function generatePrintLayout() {
   const spacing = 20 // 照片间距
   
   // 计算可排列的行列数
-  const availableWidth = a4Width - 2 * margin
-  const availableHeight = a4Height - 2 * margin
+  const availableWidth = paperWidth - 2 * margin
+  const availableHeight = paperHeight - 2 * margin
   
   const cols = Math.floor((availableWidth + spacing) / (photoWidth + spacing))
   const rows = Math.floor((availableHeight + spacing) / (photoHeight + spacing))
@@ -412,8 +420,8 @@ function generatePrintLayout() {
   // 计算实际起始位置（居中排列）
   const totalWidth = cols * photoWidth + (cols - 1) * spacing
   const totalHeight = rows * photoHeight + (rows - 1) * spacing
-  const startX = (a4Width - totalWidth) / 2
-  const startY = (a4Height - totalHeight) / 2
+  const startX = (paperWidth - totalWidth) / 2
+  const startY = (paperHeight - totalHeight) / 2
   
   // 创建图片对象
   const img = new Image()
@@ -457,7 +465,7 @@ function generatePrintLayout() {
     ctx.textAlign = 'center'
     
     const infoText = `${selectedSize.value.name} (${selectedSize.value.width}×${selectedSize.value.height}mm) - ${rows}×${cols}=${rows*cols}张`
-    ctx.fillText(infoText, a4Width / 2, a4Height - 20)
+    ctx.fillText(infoText, paperWidth / 2, paperHeight - 20)
     
     printLayoutImage.value = printCanvasEl.toDataURL('image/png')
   }
