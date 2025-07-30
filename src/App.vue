@@ -1,161 +1,150 @@
 <template>
   <div id="app">
-    <el-container>
-      <el-header>
-        <h1 style="text-align: center; margin: 0; color: #409EFF;">
+    <div class="mobile-container">
+      <!-- 顶部标题 -->
+      <div class="header">
+        <h1>
           <el-icon><Camera /></el-icon>
-          一键证件照生成工具
+          证件照生成
         </h1>
-      </el-header>
+      </div>
       
-      <el-main>   
-        <el-row :gutter="20">
-          <!-- 左侧控制面板 -->
-          <el-col :span="8">
-            <el-card shadow="hover">
-              <template #header>
-                <span>控制面板</span>
-              </template>
-              
-              <!-- 图片上传 -->
-              <div class="control-section">
-                <h3>1. 上传图片</h3>
-                <el-upload
-                  class="upload-demo"
-                  drag
-                  :auto-upload="false"
-                  :on-change="handleImageUpload"
-                  :show-file-list="false"
-                  accept="image/*"
-                >
-                  <el-icon class="el-icon--upload"><upload-filled /></el-icon>
-                  <div class="el-upload__text">
-                    拖拽图片到此处或 <em>点击上传</em>
-                  </div>
-                  <template #tip>
-                    <div class="el-upload__tip">
-                      支持 jpg/png 格式图片
-                    </div>
-                  </template>
-                </el-upload>
+      <!-- 主要内容区域 -->
+      <div class="main-content">
+        <!-- 图片上传区域 -->
+        <div class="upload-section">
+          <div v-if="modelLoading" class="loading-tip">
+            <el-icon class="loading-icon"><Loading /></el-icon>
+            <span>模型加载中，请稍候...</span>
+          </div>
+          <el-upload
+            v-else
+            class="upload-demo"
+            drag
+            :auto-upload="false"
+            :on-change="handleImageUpload"
+            :show-file-list="false"
+            accept="image/*"
+          >
+            <el-icon class="el-icon--upload" size="32"><upload-filled /></el-icon>
+            <div class="el-upload__text">
+              点击或拖拽上传图片
+            </div>
+            <template #tip>
+              <div class="el-upload__tip">
+                支持 jpg/png 格式
               </div>
+            </template>
+          </el-upload>
+        </div>
 
-              <!-- 背景颜色选择 -->
-              <div class="control-section">
-                <h3>2. 选择背景颜色</h3>
-                <el-row :gutter="10">
-                  <el-col :span="6" v-for="color in backgroundColors" :key="color.name">
-                    <div 
-                      class="color-option"
-                      :class="{ active: selectedBgColor === color.value }"
-                      :style="{ backgroundColor: color.value }"
-                      @click="selectedBgColor = color.value"
-                    >
-                      <span class="color-name">{{ color.name }}</span>
-                    </div>
-                  </el-col>
-                </el-row>
-                <div style="margin-top: 10px;">
-                  <el-color-picker v-model="selectedBgColor" show-alpha />
-                  <span style="margin-left: 10px;">自定义颜色</span>
-                </div>
+        <!-- 预览区域 -->
+        <div class="preview-section" v-show="originalImage || processedImage">
+          <!-- 原图和结果图并排显示 -->
+          <div class="image-row" v-show="originalImage">
+            <div class="image-item">
+              <div class="image-title">原图</div>
+              <div class="image-wrapper">
+                <img :src="originalImage" alt="原图" />
               </div>
-
-              <!-- 证件照尺寸选择 -->
-              <div class="control-section">
-                <h3>3. 选择证件照尺寸</h3>
-                <el-select v-model="selectedSize" placeholder="请选择尺寸" style="width: 100%;" value-key="name">
-                  <el-option
-                    v-for="size in photoSizes"
-                    :key="size.name"
-                    :label="`${size.name} (${size.width}×${size.height}mm)`"
-                    :value="size"
-                  />
-                </el-select>
+            </div>
+            <div class="image-item" v-show="processedImage">
+              <div class="image-title">证件照</div>
+              <div class="image-wrapper">
+                <canvas ref="resultCanvas"></canvas>
               </div>
+            </div>
+          </div>
+          
+          <!-- 打印排版预览 -->
+          <div class="print-preview" v-show="printLayoutImage">
+            <div class="image-title">打印排版</div>
+            <div class="image-wrapper">
+              <canvas ref="printCanvas"></canvas>
+            </div>
+          </div>
+        </div>
 
-              <!-- 处理按钮 -->
-              <div class="control-section">
-                <el-button 
-                  type="primary" 
-                  size="large" 
-                  style="width: 100%;"
-                  :loading="processing"
-                  :disabled="!originalImage"
-                  @click="processImage"
-                >
-                  <el-icon><Magic /></el-icon>
-                  {{ processing ? '处理中...' : '生成证件照' }}
-                </el-button>
+        <!-- 控制面板 -->
+        <div class="control-panel">
+          <!-- 背景颜色选择 -->
+          <div class="control-group">
+            <div class="group-title">背景颜色</div>
+            <div class="color-grid">
+              <div 
+                v-for="color in backgroundColors" 
+                :key="color.name"
+                class="color-item"
+                :class="{ active: selectedBgColor === color.value }"
+                :style="{ backgroundColor: color.value }"
+                @click="selectedBgColor = color.value"
+              >
+                <span class="color-name">{{ color.name }}</span>
               </div>
+            </div>
+            <div class="custom-color">
+              <el-color-picker v-model="selectedBgColor" size="small" />
+              <span>自定义</span>
+            </div>
+          </div>
 
-              <!-- 下载按钮 -->
-              <div class="control-section" v-if="processedImage">
-                <el-button 
-                  type="success" 
-                  size="large" 
-                  style="width: 100%; margin-bottom: 10px;"
-                  @click="downloadImage"
-                >
-                  <el-icon><Download /></el-icon>
-                  下载证件照
-                </el-button>
-                <el-button 
-                  type="warning" 
-                  size="large" 
-                  style="width: 100%;"
-                  @click="downloadPrintLayout"
-                >
-                  <el-icon><Printer /></el-icon>
-                  下载打印排版
-                </el-button>
-              </div>
-            </el-card>
-          </el-col>
+          <!-- 证件照尺寸选择 -->
+          <div class="control-group">
+            <div class="group-title">照片尺寸</div>
+            <el-select v-model="selectedSize" placeholder="选择尺寸" size="large" value-key="name">
+              <el-option
+                v-for="size in photoSizes"
+                :key="size.name"
+                :label="`${size.name} (${size.width}×${size.height}mm)`"
+                :value="size"
+              />
+            </el-select>
+          </div>
 
-          <!-- 右侧预览区域 -->
-          <el-col :span="16">
-            <el-card shadow="hover">
-              <template #header>
-                <span>预览效果</span>
-              </template>
-              
-              <div class="preview-container">
-                <!-- 原图预览 -->
-                <div class="preview-item" v-show="originalImage">
-                  <h4>原图</h4>
-                  <div class="image-container">
-                    <img :src="originalImage" alt="原图" />
-                  </div>
-                </div>
+          <!-- 操作按钮 -->
+          <div class="action-buttons">
+            <el-button 
+              type="primary" 
+              size="large" 
+              :loading="processing"
+              :disabled="!originalImage"
+              @click="processImage"
+              class="action-btn"
+            >
+              <el-icon><Magic /></el-icon>
+              {{ processing ? '处理中...' : '生成证件照' }}
+            </el-button>
+            
+            <div class="download-buttons" v-show="processedImage">
+              <el-button 
+                type="success" 
+                size="large" 
+                @click="downloadImage"
+                class="action-btn"
+              >
+                <el-icon><Download /></el-icon>
+                下载证件照
+              </el-button>
+              <el-button 
+                type="warning" 
+                size="large" 
+                @click="downloadPrintLayout"
+                class="action-btn"
+              >
+                <el-icon><Printer /></el-icon>
+                下载排版
+              </el-button>
+            </div>
+          </div>
+        </div>
 
-                <!-- 处理后预览 -->
-                <div class="preview-item" v-show="processedImage">
-                  <h4>证件照效果</h4>
-                  <div class="image-container">
-                    <canvas ref="resultCanvas" style="max-width: 100%; height: auto;"></canvas>
-                  </div>
-                </div>
-
-                <!-- 打印排版预览 -->
-                <div class="preview-item" v-show="printLayoutImage">
-                  <h4>打印排版效果</h4>
-                  <div class="image-container">
-                    <canvas ref="printCanvas" style="max-width: 100%; height: auto;"></canvas>
-                  </div>
-                </div>
-
-                <!-- 空状态 -->
-                <div v-show="!originalImage" class="empty-state">
-                  <el-icon size="64" color="#C0C4CC"><Picture /></el-icon>
-                  <p>请上传图片开始制作证件照</p>
-                </div>
-              </div>
-            </el-card>
-          </el-col>
-        </el-row>
-      </el-main>
-    </el-container>
+        <!-- 空状态 -->
+        <div v-if="!originalImage && !modelLoading" class="empty-state">
+          <el-icon size="60" color="#C0C4CC"><Picture /></el-icon>
+          <p>上传图片开始制作证件照</p>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -170,6 +159,7 @@ const originalImage = ref(null)
 const processedImage = ref(null)
 const printLayoutImage = ref(null)
 const processing = ref(false)
+const modelLoading = ref(true)
 const selectedBgColor = ref('#FFFFFF')
 const selectedSize = ref(null)
 const resultCanvas = ref(null)
@@ -201,6 +191,7 @@ onMounted(async () => {
 // 初始化ONNX
 async function initONNX() {
   try {
+    modelLoading.value = true
     // // 设置ONNX运行时
     // if (ort.env && ort.env.wasm) {
     //   ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.15.1/dist/'
@@ -213,13 +204,17 @@ async function initONNX() {
     }
 
     if (import.meta.env.PROD) {
-      modelPath = '/IDPhotoGenerator/modnet/model.onnx'
+      // modelPath = '/IDPhotoGenerator/modnet/model.onnx'
+      modelPath = '/modnet/model.onnx'
     }
     session.value = await ort.InferenceSession.create(modelPath)
     console.log('ModNet模型加载成功')
+    ElMessage.success('模型加载完成，可以开始使用！')
   } catch (error) {
     console.error('模型加载失败:', error)
     ElMessage.error('模型加载失败，请检查网络连接')
+  } finally {
+    modelLoading.value = false
   }
 }
 
@@ -498,119 +493,334 @@ function downloadPrintLayout() {
 #app {
   min-height: 100vh;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-.el-header {
-  background-color: rgba(255, 255, 255, 0.95);
+.mobile-container {
+  max-width: 100vw;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 顶部标题 */
+.header {
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
-  border-radius: 0 0 20px 20px;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: 10px 15px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
-.control-section {
-  margin-bottom: 25px;
-}
-
-.control-section h3 {
+.header h1 {
+  margin: 0;
   color: #409EFF;
-  margin-bottom: 15px;
-  font-size: 16px;
-}
-
-.color-option {
-  width: 100%;
-  height: 60px;
-  border-radius: 8px;
-  cursor: pointer;
-  border: 2px solid transparent;
+  font-size: 18px;
+  font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
-  margin-bottom: 10px;
+  gap: 6px;
 }
 
-.color-option:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.color-option.active {
-  border-color: #409EFF;
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
-}
-
-.color-name {
-  color: #333;
-  font-weight: bold;
-  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
-}
-
-.preview-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-  justify-content: center;
-}
-
-.preview-item {
+/* 主要内容区域 */
+.main-content {
   flex: 1;
-  min-width: 300px;
-  text-align: center;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.preview-item h4 {
-  color: #409EFF;
-  margin-bottom: 15px;
+/* 图片上传区域 */
+.upload-section {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 10px;
+  padding: 15px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
 }
 
-.image-container {
-  border: 2px dashed #E4E7ED;
-  border-radius: 8px;
-  padding: 20px;
-  background-color: #FAFAFA;
-  min-height: 200px;
+.loading-tip {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
+  padding: 20px;
+  color: #409EFF;
+  font-size: 14px;
 }
 
-.image-container img {
-  max-width: 100%;
-  max-height: 400px;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+.loading-icon {
+  animation: rotate 2s linear infinite;
 }
 
-.empty-state {
-  text-align: center;
-  color: #909399;
-  padding: 60px 20px;
-}
-
-.empty-state p {
-  margin-top: 16px;
-  font-size: 16px;
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .upload-demo {
   width: 100%;
 }
 
-.el-card {
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
-
-.el-button {
+.upload-demo .el-upload-dragger {
+  width: 100%;
+  height: 90px;
   border-radius: 8px;
-  font-weight: bold;
+  border: 2px dashed #d9d9d9;
+  background: #fafafa;
 }
 
+.el-upload__text {
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+.el-upload__tip {
+  font-size: 11px;
+  color: #999;
+  margin-top: 3px;
+}
+
+/* 预览区域 */
+.preview-section {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
+}
+
+.image-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.image-item {
+  flex: 1;
+  text-align: center;
+}
+
+.image-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #409EFF;
+  margin-bottom: 6px;
+}
+
+.image-wrapper {
+  border: 2px dashed #E4E7ED;
+  border-radius: 6px;
+  padding: 8px;
+  background: #fafafa;
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-wrapper img,
+.image-wrapper canvas {
+  max-width: 100%;
+  max-height: 150px;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.print-preview {
+  margin-top: 10px;
+  text-align: center;
+}
+
+.print-preview .image-wrapper {
+  min-height: 80px;
+}
+
+.print-preview .image-wrapper canvas {
+  max-height: 100px;
+}
+
+/* 控制面板 */
+.control-panel {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 10px;
+  padding: 15px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.group-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #409EFF;
+}
+
+/* 颜色选择 */
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.color-item {
+  height: 40px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.color-item:active {
+  transform: scale(0.95);
+}
+
+.color-item.active {
+  border-color: #409EFF;
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+}
+
+.color-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+.custom-color {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.custom-color span {
+  font-size: 14px;
+  color: #666;
+}
+
+/* 尺寸选择 */
 .el-select {
+  width: 100%;
+}
+
+/* 操作按钮 */
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.action-btn {
+  width: 100%;
+  height: 42px;
   border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.download-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.download-buttons .action-btn {
+  flex: 1;
+  height: 38px;
+  font-size: 13px;
+}
+
+/* 空状态 */
+.empty-state {
+  text-align: center;
+  color: #909399;
+  padding: 30px 15px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 10px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
+}
+
+.empty-state p {
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+/* 响应式设计 */
+@media (max-width: 480px) {
+  .main-content {
+    padding: 8px;
+    gap: 8px;
+  }
+  
+  .header {
+    padding: 8px 12px;
+  }
+  
+  .header h1 {
+    font-size: 16px;
+  }
+  
+  .control-panel,
+  .upload-section,
+  .preview-section {
+    padding: 12px;
+  }
+  
+  .image-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .color-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .download-buttons {
+    flex-direction: column;
+    gap: 6px;
+  }
+  
+  .action-btn {
+    font-size: 13px;
+    height: 38px;
+  }
+  
+  .upload-demo .el-upload-dragger {
+    height: 80px;
+  }
+  
+  .image-wrapper {
+    min-height: 100px;
+  }
+  
+  .image-wrapper img,
+  .image-wrapper canvas {
+    max-height: 120px;
+  }
+}
+
+@media (min-width: 768px) {
+  .mobile-container {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  
+  .main-content {
+    padding: 20px;
+  }
 }
 </style>
