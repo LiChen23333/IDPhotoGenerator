@@ -469,24 +469,101 @@ function generatePrintLayout() {
   img.src = processedImage.value
 }
 
+// 检测是否为移动设备
+function isMobileDevice() {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+}
+
 // 下载图片
 function downloadImage() {
   if (!processedImage.value) return
   
-  const link = document.createElement('a')
-  link.download = `证件照_${selectedSize.value.name}_${Date.now()}.png`
-  link.href = processedImage.value
-  link.click()
+  const filename = `证件照_${selectedSize.value.name}_${Date.now()}.png`
+  
+  if (isMobileDevice()) {
+    // 移动端：在新窗口打开图片，用户可以长按保存
+    const newWindow = window.open()
+    if (newWindow) {
+      newWindow.document.write(`
+        <html>
+          <head>
+            <title>${filename}</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              body { margin: 0; padding: 20px; text-align: center; background: #f5f5f5; }
+              img { max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+              .tip { margin-top: 20px; color: #666; font-size: 14px; }
+            </style>
+          </head>
+          <body>
+            <img src="${processedImage.value}" alt="${filename}" />
+            <div class="tip">长按图片保存到相册</div>
+          </body>
+        </html>
+      `)
+      newWindow.document.close()
+    } else {
+      // 如果无法打开新窗口，尝试传统下载方式
+      fallbackDownload(processedImage.value, filename)
+    }
+  } else {
+    // 桌面端：使用传统下载方式
+    fallbackDownload(processedImage.value, filename)
+  }
 }
 
 // 下载打印排版
 function downloadPrintLayout() {
   if (!printLayoutImage.value) return
   
-  const link = document.createElement('a')
-  link.download = `证件照排版_${selectedSize.value.name}_${Date.now()}.png`
-  link.href = printLayoutImage.value
-  link.click()
+  const filename = `证件照排版_${selectedSize.value.name}_${Date.now()}.png`
+  
+  if (isMobileDevice()) {
+    // 移动端：在新窗口打开图片，用户可以长按保存
+    const newWindow = window.open()
+    if (newWindow) {
+      newWindow.document.write(`
+        <html>
+          <head>
+            <title>${filename}</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              body { margin: 0; padding: 20px; text-align: center; background: #f5f5f5; }
+              img { max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+              .tip { margin-top: 20px; color: #666; font-size: 14px; }
+            </style>
+          </head>
+          <body>
+            <img src="${printLayoutImage.value}" alt="${filename}" />
+            <div class="tip">长按图片保存到相册</div>
+          </body>
+        </html>
+      `)
+      newWindow.document.close()
+    } else {
+      // 如果无法打开新窗口，尝试传统下载方式
+      fallbackDownload(printLayoutImage.value, filename)
+    }
+  } else {
+    // 桌面端：使用传统下载方式
+    fallbackDownload(printLayoutImage.value, filename)
+  }
+}
+
+// 传统下载方式（兜底方案）
+function fallbackDownload(dataUrl, filename) {
+  try {
+    const link = document.createElement('a')
+    link.download = filename
+    link.href = dataUrl
+    link.style.display = 'none'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  } catch (error) {
+    console.error('下载失败:', error)
+    ElMessage.warning('下载失败，请尝试长按图片保存')
+  }
 }
 </script>
 
@@ -784,8 +861,8 @@ function downloadPrintLayout() {
   }
   
   .image-row {
-    flex-direction: column;
-    gap: 10px;
+    flex-direction: row;
+    gap: 6px;
   }
   
   .download-buttons {
