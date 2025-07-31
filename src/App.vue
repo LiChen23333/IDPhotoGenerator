@@ -81,11 +81,12 @@
               >
                 <span class="color-name">{{ color.name }}</span>
               </div>
-            </div>
-            <div class="custom-color">
+              <div class="custom-color">
               <el-color-picker v-model="selectedBgColor" size="small" />
               <span>自定义</span>
             </div>
+            </div>
+            
           </div>
 
           <!-- 证件照尺寸选择 -->
@@ -539,7 +540,7 @@ function downloadPrintLayout() {
 .upload-section {
   background: rgba(255, 255, 255, 0.95);
   border-radius: 10px;
-  padding: 15px;
+  padding: 10px 20px 0 20px;
   box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
 }
 
@@ -595,6 +596,7 @@ function downloadPrintLayout() {
 
 .image-row {
   display: flex;
+  flex-direction: row;
   gap: 8px;
   margin-bottom: 10px;
 }
@@ -668,14 +670,16 @@ function downloadPrintLayout() {
 
 /* 颜色选择 */
 .color-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
+  display: flex;
+  flex-direction: row;
 }
 
 .color-item {
-  height: 40px;
+  height: 24px;
+  width: auto;
+  flex:1;
   border-radius: 6px;
+  margin-right: 6px;
   cursor: pointer;
   border: 2px solid transparent;
   display: flex;
@@ -704,8 +708,7 @@ function downloadPrintLayout() {
 .custom-color {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 8px;
+  flex:2;
 }
 
 .custom-color span {
@@ -783,10 +786,6 @@ function downloadPrintLayout() {
   .image-row {
     flex-direction: column;
     gap: 10px;
-  }
-  
-  .color-grid {
-    grid-template-columns: repeat(2, 1fr);
   }
   
   .download-buttons {
