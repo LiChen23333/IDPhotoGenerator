@@ -675,7 +675,7 @@ function downloadPrintLayout() {
 }
 
 .color-item {
-  height: 24px;
+  height: 32px;
   width: auto;
   flex:1;
   border-radius: 6px;
@@ -819,7 +819,12 @@ function downloadPrintLayout() {
   }
   
   .main-content {
-    padding: 20px;
+    padding: 10px;
   }
+}
+
+:deep(.el-upload-dragger)
+{
+  padding: 0;
 }
 </style>
